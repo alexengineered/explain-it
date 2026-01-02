@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explain It</title>
+    <meta name="author" content="Alex Engineered">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+    <style>
+        body {
+            font-family: "Avenir", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f7f7f8;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .pdf-panel {
+            width: 66.67%;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            min-width: 300px;
+        }
+
+        .resizer {
+            width: 6px;
+            background: #bdc3c7;
+            cursor: col-resize;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .resizer:hover {
+            background: #83AE62;
+        }
+
+        .resizer::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 30px;
+            background: #7f8c8d;
+            border-radius: 2px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+
+        .logo {
+            height: 14px;
+            width: auto;
+        }
+
+        .copyright {
+            font-size: 12px;
+            color: #bfc9cd;
+        }
+
+        .controls {
+            padding: 18px;
+            background: #1B2F36;
+            border-bottom: 1px solid #e5e5e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls h3 {
+            margin: 0;
+            color: #83AE62;
+            font-weight: 500;
+            font-size: 26px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .clear-btn {
+            background: #3E606C;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            line-height: 1.4;
+        }
+
+        .clear-btn:hover {
+            background: #83AE62;
+        }
+
+        .settings-btn {
+            background: #3E606C;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            line-height: 1.4;
+        }
+
+        .settings-btn:hover {
+            background: #83AE62;
+        }
+
+        .highlight-item {
+            background: #fefdf8;
+            border: 1px solid #83AE62;
+            border-radius: 6px;
+            padding: 12px 36px 12px 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .highlight-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #e74c3c;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            line-height: 1;
+        }
+
+        .highlight-delete:hover {
+            color: #c0392b;
+        }
+
+        .drop-zone {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px dashed #bdc3c7;
+            margin: 20px;
+            border-radius: 10px;
+            background: #ecf0f1;
+            transition: all 0.3s;
+        }
+
+        .drop-zone.dragover {
+            border-color: #83AE62;
+            background: #e8f4fd;
+        }
+
+        .drop-content {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 60px 40px;
+        }
+
+        .controls h1 {
+            color: #83ae62;
+            font-size: 32px;
+            margin: 0 0 0 20px;
+            font-weight: 400;
+            font-family: "Baskerville",serif;
+        }
+
+        .drop-content .instructions {
+            color: #2c3e50;
+            font-size: 20px;
+            margin: 0 0 60px 0;
+            font-weight: 300;
+            line-height: 1.4;
+        }
+
+        .select-file-btn {
+            background: #1b2f36;
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .select-file-btn:hover {
+            background: #2a4450;
+        }
+
+        .drop-zone-text {
+            color: #95a5a6;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            overflow: auto;
+            display: none;
+            padding: 20px;
+            background: #ecf0f1;
+        }
+
+        .pdf-page {
+            margin: 0 auto 20px auto;
+            display: block;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #bdc3c7;
+        }
+
+        .text-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 0.25;
+            line-height: 1.0;
+        }
+
+        .text-layer > span {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+        }
+
+        .text-layer ::selection {
+            background: rgb(182, 216, 156);
+        }
+
+        .page-navigation {
+            display: none;
+            padding: 12px;
+            background: #ecf0f1;
+            border-top: 1px solid #bdc3c7;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-navigation.visible {
+            display: flex;
+        }
+
+        .nav-btn {
+            background: #3E606C;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #83AE62;
+        }
+
+        .nav-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .page-input {
+            width: 50px;
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .page-total {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .highlights-panel {
+            width: 33.33%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            min-width: 250px;
+        }
+
+        .highlights-header {
+            padding: 18px 25px;
+            background: #1B2F36;
+            border-bottom: 1px solid #e5e5e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .highlights-header h3 {
+            margin: 0;
+            color: #fff;
+            font-weight: 500;
+            font-size: 18px;
+        }
+
+        .highlights-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .selected-highlight {
+            background: #fefdf8;
+            border: 2px solid #83AE62;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .selected-highlight-label {
+            font-weight: 600;
+            color: #1B2F36;
+            margin-bottom: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .expertise-section {
+            margin-bottom: 20px;
+        }
+
+        .expertise-label {
+            font-weight: 600;
+            color: #1B2F36;
+            margin-bottom: 10px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-container {
+            margin-bottom: 8px;
+        }
+
+        .expertise-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .expertise-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #83AE62;
+            cursor: pointer;
+        }
+
+        .expertise-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #83AE62;
+            cursor: pointer;
+            border: none;
+        }
+
+        .expertise-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .explain-btn {
+            width: 100%;
+            background: #1B2F36;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .explain-btn:hover:not(:disabled) {
+            background: #83AE62;
+        }
+
+        .explain-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #1B2F36;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 40px 20px;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Chat Interface Styles */
+        .chat-container {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            border-top: 2px solid #e5e5e6;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .chat-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1B2F36;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .clear-chat-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            transition: opacity 0.2s;
+        }
+
+        .clear-chat-btn:hover {
+            opacity: 0.7;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            max-height: 400px;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .chat-message.user {
+            background: #e8f4fd;
+            border: 1px solid #b8dff5;
+            margin-left: 20px;
+        }
+
+        .chat-message.assistant {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            margin-right: 20px;
+        }
+
+        .chat-message.loading {
+            background: #ECF0F1;
+            border: 1px solid #1B2F36;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .loading-dots span {
+            width: 6px;
+            height: 6px;
+            background: #7f8c8d;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .chat-input-container {
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 18px 50px 18px 16px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 60px;
+            max-height: 120px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #83AE62;
+        }
+
+        .chat-send-btn {
+            position: absolute;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #83AE62;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-send-btn:hover:not(:disabled) {
+            background: #6b9050;
+        }
+
+        .chat-send-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .chat-message.assistant {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            margin-right: 20px;
+            position: relative;  /* ADD THIS */
+        }
+
+        /* ADD THIS NEW SECTION */
+        .copy-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #7f8c8d;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+            transition: color 0.2s;
+            opacity: 0.6;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+            color: #1B2F36;
+        }
+
+        .clear-chat-btn:hover {
+            opacity: 0.7;
+        }
+
+        .save-chat-btn {
+            background: none;
+            border: none;
+            color: #83AE62;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            transition: opacity 0.2s;
+        }
+
+        .save-chat-btn:hover {
+            opacity: 0.7;
+        }
+
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            background: #1B2F36;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+
+        .modal-close:hover {
+            opacity: 0.7;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #1B2F36;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #83AE62;
+        }
+
+        .provider-description {
+            margin-top: 8px;
+            margin-left: 12px;
+            font-size: 13px;
+            color: #7f8c8d;
+            line-height: 1.4;
+        }
+
+        .api-key-container {
+            position: relative;
+        }
+
+        .toggle-visibility {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #7f8c8d;
+            padding: 0;
+        }
+
+        .toggle-visibility:hover {
+            color: #1B2F36;
+        }
+
+        .save-btn {
+            width: 100%;
+            background: #83AE62;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .save-btn:hover {
+            background: #6b9050;
+        }
+
+        .info-banner {
+            background: #e8f4fd;
+            border: 1px solid #b8dff5;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+
+        .info-banner strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="pdf-panel" id="pdfPanel">
+        <div class="controls">
+            <h1>Explain It</h1>
+            <div class="button-group">
+                <button class="settings-btn" id="settingsBtn">⚙️ Settings</button>
+                <button class="clear-btn" id="changePdfBtn" style="display: none;">📄 Change PDF</button>
+            </div>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-content">
+                <p class="instructions">Highlight confusing sections and then click on Explain button in right
+                    column.</p>
+                <input type="file" id="fileInput" accept="application/pdf">
+                <button class="select-file-btn" id="selectFileBtn">Select PDF File</button>
+                <p class="drop-zone-text">Drop PDF here or </p>
+            </div>
+        </div>
+
+        <div class="pdf-viewer" id="pdfViewer">
+            <div id="pdfContainer"></div>
+        </div>
+        <div class="page-navigation" id="pageNavigation">
+            <button class="nav-btn" id="firstPageBtn" title="First Page">⏮</button>
+            <button class="nav-btn" id="prevPageBtn" title="Previous Page">◀</button>
+            <input type="number" class="page-input" id="pageInput" min="1" value="1">
+            <span class="page-total" id="pageTotal">/ 1</span>
+            <button class="nav-btn" id="nextPageBtn" title="Next Page">▶</button>
+            <button class="nav-btn" id="lastPageBtn" title="Last Page">⏭</button>
+        </div>
+    </div>
+
+    <div class="resizer" id="resizer"></div>
+
+    <div class="highlights-panel" id="highlightsPanel">
+        <div class="highlights-header">
+            <h3>📝 Explain</h3>
+            <button class="clear-btn" id="clearBtn">🗑️ Clear</button>
+        </div>
+        <div class="highlights-content">
+            <div class="status" id="status"></div>
+
+            <div id="selectedHighlightContainer" style="display: none;">
+                <div class="selected-highlight-label">Selected Text</div>
+                <div class="selected-highlight" id="selectedHighlight"></div>
+            </div>
+
+            <div class="expertise-section">
+                <div class="expertise-label">Expertise Level</div>
+                <div class="slider-container">
+                    <input type="range" min="1" max="5" value="3" class="expertise-slider" id="expertiseSlider">
+                    <div class="expertise-labels">
+                        <span>Student</span>
+                        <span>Professional</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="explain-btn" id="explainBtn" disabled>Explain</button>
+
+            <div id="emptyState" class="empty-state">
+                Load a PDF and select text to begin.
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-header">
+                    <h4>💬 Conversation</h4>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="save-chat-btn" id="saveChatBtn">💾 Save</button>
+                        <button class="clear-chat-btn" id="clearChatBtn">Clear Chat</button>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="chatInput" placeholder="Ask a follow-up question..."
+                              rows="1"></textarea>
+                    <button class="chat-send-btn" id="chatSendBtn">↑</button>
+                </div>
+            </div>
+            <div class="logo-container">
+                <img src="./logo.png" alt="Explain It Logo" class="logo">
+                <span class="copyright" id="copyright">@ 2025</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>⚙️ API Settings</h2>
+            <button class="modal-close" id="modalClose">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="info-banner">
+                <strong>ℹ️ Need an API Key?</strong>
+                Choose a provider below and sign up on their website to get your API key. Most offer free trial credits!
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">AI Provider</label>
+                <select class="form-select" id="providerSelect">
+                    <option value="claude">Claude – Best for technical docs, most accurate</option>
+                    <option value="openai">OpenAI – Strong reasoning and versatile</option>
+                    <option value="gemini">Gemini – Balance of quality & speed</option>
+                    <option value="qwen">Qwen – Quality output at a low price point</option>
+                    <option value="deepseek">DeepSeek – Cheapest option for straightforward analysis</option>
+                </select>
+                <div class="provider-description" id="providerDescription"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <div class="api-key-container">
+                    <input type="password" class="form-input" id="apiKeyInput" placeholder="Paste your API key here">
+                    <button class="toggle-visibility" id="toggleVisibility">👁️</button>
+                </div>
+            </div>
+
+            <button class="save-btn" id="saveSettingsBtn">💾 Save Settings</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+
+    let currentScale = 1.2;
+    let currentPdf = null;
+    let selectedTexts = [];
+    let currentPage = 1;
+    let totalPages = 0;
+    let pageElements = [];
+    let conversationHistory = [];
+
+    // API Settings
+    let apiSettings = {
+        provider: '',
+        apiKey: ''
+    };
+
+    // Provider descriptions and configs
+    const providerDescriptions = {
+        claude: 'Handles long or complex files with high accuracy and clear explanations.',
+        openai: 'Delivers thorough and structured explanations.',
+        gemini: 'Solid performance, good value, and quick response times.',
+        qwen: 'Accurate responses and great for bulk use.',
+        deepseek: 'Very low-cost model suitable for technical text.'
+    };
+
+    const providerModels = {
+        openai: 'gpt-4o',
+        claude: 'claude-3-5-sonnet-20241022',
+        gemini: 'gemini-1.5-pro',
+        qwen: 'qwen-max',
+        deepseek: 'deepseek-chat'
+    };
+
+    // Elements
+    const dropZone = document.getElementById('dropZone');
+    const pdfViewer = document.getElementById('pdfViewer');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const clearBtn = document.getElementById('clearBtn');
+    const changePdfBtn = document.getElementById('changePdfBtn');
+    const status = document.getElementById('status');
+    const pdfPanel = document.getElementById('pdfPanel');
+    const highlightsPanel = document.getElementById('highlightsPanel');
+    const resizer = document.getElementById('resizer');
+    const selectedHighlightContainer = document.getElementById('selectedHighlightContainer');
+    const selectedHighlight = document.getElementById('selectedHighlight');
+    const explainBtn = document.getElementById('explainBtn');
+    const emptyState = document.getElementById('emptyState');
+    const expertiseSlider = document.getElementById('expertiseSlider');
+
+    // Chat elements
+    const chatContainer = document.getElementById('chatContainer');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+
+    // Page navigation elements
+    const pageNavigation = document.getElementById('pageNavigation');
+    const firstPageBtn = document.getElementById('firstPageBtn');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    const lastPageBtn = document.getElementById('lastPageBtn');
+    const pageInput = document.getElementById('pageInput');
+    const pageTotal = document.getElementById('pageTotal');
+
+    // File input elements
+    const fileInput = document.getElementById('fileInput');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+
+    // Modal elements
+    const settingsBtn = document.getElementById('settingsBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalClose = document.getElementById('modalClose');
+    const providerSelect = document.getElementById('providerSelect');
+    const providerDescription = document.getElementById('providerDescription');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const toggleVisibility = document.getElementById('toggleVisibility');
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+
+    // Load saved settings from localStorage
+    function loadSettings() {
+        const saved = localStorage.getItem('explainItSettings');
+        if (saved) {
+            apiSettings = JSON.parse(saved);
+        }
+    }
+
+    // Save settings to localStorage
+    function saveSettings() {
+        localStorage.setItem('explainItSettings', JSON.stringify(apiSettings));
+    }
+
+    // Settings modal handlers
+    settingsBtn.addEventListener('click', () => {
+        providerSelect.value = apiSettings.provider || '';
+        apiKeyInput.value = apiSettings.apiKey || '';
+        updateProviderDescription();
+        modalOverlay.classList.add('active');
+    });
+
+    modalClose.addEventListener('click', () => {
+        modalOverlay.classList.remove('active');
+    });
+
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            modalOverlay.classList.remove('active');
+        }
+    });
+
+    providerSelect.addEventListener('change', updateProviderDescription);
+
+    function updateProviderDescription() {
+        const provider = providerSelect.value;
+        if (provider && providerDescriptions[provider]) {
+            providerDescription.textContent = providerDescriptions[provider];
+            providerDescription.style.display = 'block';
+        } else {
+            providerDescription.style.display = 'none';
+        }
+    }
+
+    toggleVisibility.addEventListener('click', () => {
+        const type = apiKeyInput.type === 'password' ? 'text' : 'password';
+        apiKeyInput.type = type;
+        toggleVisibility.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    saveSettingsBtn.addEventListener('click', () => {
+        const provider = providerSelect.value;
+        const apiKey = apiKeyInput.value.trim();
+
+        if (!provider) {
+            showStatus('Please select a provider', 'error');
+            return;
+        }
+
+        if (!apiKey) {
+            showStatus('Please enter your API key', 'error');
+            return;
+        }
+
+        apiSettings.provider = provider;
+        apiSettings.apiKey = apiKey;
+        saveSettings();
+
+        modalOverlay.classList.remove('active');
+        showStatus('✅ Settings saved successfully!');
+    });
+
+    // Chat functionality
+    function addMessage(content, role) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${role}`;
+        messageDiv.textContent = content;
+
+        if (role === 'assistant') {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = '📋';
+            copyBtn.title = 'Copy to clipboard';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(content);
+                copyBtn.innerHTML = '✓';
+                setTimeout(() => copyBtn.innerHTML = '📋', 2000);
+            };
+            messageDiv.appendChild(copyBtn);
+        }
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addLoadingMessage() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message loading';
+        messageDiv.id = 'loadingMessage';
+        messageDiv.innerHTML = 'AI is thinking<span class="loading-dots"><span></span><span></span><span></span></span>';
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeLoadingMessage() {
+        const loading = document.getElementById('loadingMessage');
+        if (loading) {
+            loading.remove();
+        }
+    }
+    // UPDATE THIS URL after deploying your Cloudflare Worker
+    const WORKER_URL = 'https://explainit-proxy.xxx.workers.dev';
+
+    async function callAPI(userMessage, isInitialExplanation = false) {
+        const provider = apiSettings.provider;
+        const apiKey = apiSettings.apiKey;
+        const expertiseLevel = parseInt(expertiseSlider.value);
+
+        const expertiseLevels = [
+            ' to someone with no technical background and limited knowledge in the topic discussed. Use simple language, clear examples, and define any technical terms.',
+            ' to a first-year engineering student. Use simple language, basic technical terms, and link ideas to core principles.',
+            ' to an engineer with a few years of experience. Use standard terminology and focus on practical implications.',
+            ' to an experienced professional engineer. Use precise technical language, be concise, and highlight nuances.'
+        ];
+
+        const level = expertiseLevel - 1;
+        const systemPrompt = `You are explaining technical text. Be concise and direct.`;
+
+        let prompt = userMessage;
+        if (isInitialExplanation) {
+            const combinedText = selectedTexts.join('\n\n---\n\n');
+            prompt = `Briefly but clearly explain this text${expertiseLevels[level]}: "${combinedText}"`;
+        }
+
+        conversationHistory.push({
+            role: 'user',
+            content: prompt
+        });
+
+        addLoadingMessage();
+
+        try {
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    provider: provider,
+                    apiKey: apiKey,
+                    systemPrompt: systemPrompt,
+                    messages: conversationHistory
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const assistantMessage = data.content;
+
+            conversationHistory.push({
+                role: 'assistant',
+                content: assistantMessage
+            });
+
+            removeLoadingMessage();
+            addMessage(assistantMessage, 'assistant');
+
+        } catch (error) {
+            removeLoadingMessage();
+            addMessage(`❌ Error: ${error.message}`, 'assistant');
+            console.error('API Error:', error);
+        }
+    }
+
+    explainBtn.addEventListener('click', async () => {
+        if (!apiSettings.provider || !apiSettings.apiKey) {
+            showStatus('⚠️ Please configure API settings first', 'error');
+            modalOverlay.classList.add('active');
+            return;
+        }
+
+        if (selectedTexts.length > 0) {
+            emptyState.style.display = 'none';
+            chatContainer.classList.add('active');
+
+            await callAPI(selectedTexts.join('\n\n'), true);
+        }
+    });
+
+    chatSendBtn.addEventListener('click', async () => {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        addMessage(message, 'user');
+        chatInput.value = '';
+
+        await callAPI(message, false);
+    });
+
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatSendBtn.click();
+        }
+    });
+
+    clearChatBtn.addEventListener('click', () => {
+        if (confirm('Clear the entire conversation?')) {
+            chatMessages.innerHTML = '';
+            conversationHistory = [];
+            chatContainer.classList.remove('active');
+            emptyState.style.display = 'block';
+        }
+    });
+
+    // Add after clearChatBtn event listener
+    const saveChatBtn = document.getElementById('saveChatBtn');
+
+    saveChatBtn.addEventListener('click', () => {
+        if (conversationHistory.length === 0) {
+            showStatus('No conversation to save', 'error');
+            return;
+        }
+
+        let textContent = 'Explain It - Conversation Export\n';
+        textContent += '='.repeat(50) + '\n\n';
+        textContent += `Selected Text:\n${selectedTexts.join('\n\n---\n\n')}\n\n`;
+        textContent += '='.repeat(50) + '\n\n';
+
+        conversationHistory.forEach((msg, index) => {
+            const label = msg.role === 'user' ? 'You' : 'AI';
+            textContent += `${label}:\n${msg.content}\n\n`;
+        });
+
+        const blob = new Blob([textContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `explain-it-conversation-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showStatus('✅ Conversation saved!');
+    });
+
+    // Load settings on page load
+    loadSettings();
+
+    // Update copyright year
+    document.getElementById('copyright').textContent = `@ ${new Date().getFullYear()}`;
+
+    // Page navigation handlers
+    firstPageBtn.addEventListener('click', () => goToPage(1));
+    prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    lastPageBtn.addEventListener('click', () => goToPage(totalPages));
+
+    pageInput.addEventListener('change', (e) => {
+        const page = parseInt(e.target.value);
+        if (page >= 1 && page <= totalPages) {
+            goToPage(page);
+        } else {
+            pageInput.value = currentPage;
+        }
+    });
+
+    function goToPage(pageNum) {
+        if (pageNum < 1 || pageNum > totalPages) return;
+
+        currentPage = pageNum;
+        pageInput.value = currentPage;
+        updateNavigationButtons();
+
+        if (pageElements[pageNum - 1]) {
+            pageElements[pageNum - 1].scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    }
+
+    function updateNavigationButtons() {
+        firstPageBtn.disabled = currentPage === 1;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+        lastPageBtn.disabled = currentPage === totalPages;
+    }
+
+    pdfViewer.addEventListener('scroll', () => {
+        const viewerRect = pdfViewer.getBoundingClientRect();
+        const viewerCenter = viewerRect.top + viewerRect.height / 2;
+
+        for (let i = 0; i < pageElements.length; i++) {
+            const pageRect = pageElements[i].getBoundingClientRect();
+
+            if (pageRect.top <= viewerCenter && pageRect.bottom >= viewerCenter) {
+                if (currentPage !== i + 1) {
+                    currentPage = i + 1;
+                    pageInput.value = currentPage;
+                    updateNavigationButtons();
+                }
+                break;
+            }
+        }
+    });
+
+    selectFileBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf') {
+            loadPDF(file);
+        } else if (file) {
+            showStatus('Please select a PDF file', 'error');
+        }
+    });
+
+    // Resizer functionality
+    let isResizing = false;
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', stopResize);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    function handleMouseMove(e) {
+        if (!isResizing) return;
+
+        const containerRect = document.querySelector('.container').getBoundingClientRect();
+        const newPdfWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+        if (newPdfWidth >= 30 && newPdfWidth <= 80) {
+            pdfPanel.style.width = newPdfWidth + '%';
+            highlightsPanel.style.width = (100 - newPdfWidth) + '%';
+        }
+    }
+
+    function stopResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', stopResize);
+        document.body.style.cursor = 'auto';
+        document.body.style.userSelect = 'auto';
+    }
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+            loadPDF(files[0]);
+        } else {
+            showStatus('Please drop a PDF file', 'error');
+        }
+    });
+
+    function renderHighlights() {
+        selectedHighlight.innerHTML = '';
+
+        if (selectedTexts.length === 0) {
+            selectedHighlightContainer.style.display = 'none';
+            emptyState.style.display = 'block';
+            explainBtn.disabled = true;
+            return;
+        }
+
+        selectedHighlightContainer.style.display = 'block';
+        emptyState.style.display = 'none';
+        explainBtn.disabled = false;
+
+        selectedTexts.forEach((text, index) => {
+            const item = document.createElement('div');
+            item.className = 'highlight-item';
+            item.textContent = text;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'highlight-delete';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.title = 'Remove this selection';
+            deleteBtn.onclick = () => {
+                selectedTexts.splice(index, 1);
+                renderHighlights();
+            };
+
+            item.appendChild(deleteBtn);
+            selectedHighlight.appendChild(item);
+        });
+    }
+
+    function handleSelection() {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+
+        if (text && text.length > 10) {
+            selectedTexts.push(text);
+            renderHighlights();
+            selection.removeAllRanges();
+            showStatus('Text added! Select more or click Explain.');
+        }
+    }
+
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('touchend', handleSelection);
+
+    clearBtn.addEventListener('click', () => {
+        selectedTexts = [];
+        renderHighlights();
+        chatMessages.innerHTML = '';
+        conversationHistory = [];
+        chatContainer.classList.remove('active');
+        showStatus('All selections cleared');
+    });
+
+    changePdfBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    function showStatus(message, type = 'success') {
+        status.textContent = message;
+        status.className = type === 'error' ? 'status error' : 'status';
+        status.style.display = 'block';
+
+        setTimeout(() => {
+            status.style.display = 'none';
+        }, 3000);
+    }
+
+    async function loadPDF(file) {
+        try {
+            showStatus('Loading PDF...');
+            dropZone.style.display = 'none';
+            pdfViewer.style.display = 'block';
+            changePdfBtn.style.display = 'block';
+
+            const arrayBuffer = await file.arrayBuffer();
+            currentPdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            totalPages = currentPdf.numPages;
+            currentPage = 1;
+
+            pageTotal.textContent = `/ ${totalPages}`;
+            pageInput.max = totalPages;
+            pageInput.value = 1;
+
+            pageNavigation.classList.add('visible');
+
+            await reRenderPDF();
+
+            updateNavigationButtons();
+
+            showStatus('✅ PDF loaded! Select text to start.');
+
+        } catch (error) {
+            showStatus('❌ Error loading PDF: ' + error.message, 'error');
+            console.error('PDF Error:', error);
+        }
+    }
+
+    async function reRenderPDF() {
+        if (!currentPdf) return;
+
+        pdfContainer.innerHTML = '';
+        pageElements = [];
+
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            const pageElement = await renderPage(currentPdf, pageNum);
+            pageElements.push(pageElement);
+        }
+    }
+
+    async function renderPage(pdf, pageNum) {
+        try {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({scale: currentScale});
+
+            const pageContainer = document.createElement('div');
+            pageContainer.style.position = 'relative';
+            pageContainer.style.margin = '0 auto 20px auto';
+            pageContainer.style.width = viewport.width + 'px';
+            pageContainer.dataset.pageNumber = pageNum;
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            canvas.className = 'pdf-page';
+
+            pageContainer.appendChild(canvas);
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            const textLayerDiv = document.createElement('div');
+            textLayerDiv.className = 'text-layer';
+            textLayerDiv.style.width = viewport.width + 'px';
+            textLayerDiv.style.height = viewport.height + 'px';
+            pageContainer.appendChild(textLayerDiv);
+
+            try {
+                const textContent = await page.getTextContent();
+                await pdfjsLib.renderTextLayer({
+                    textContentSource: textContent,
+                    container: textLayerDiv,
+                    viewport: viewport,
+                    textDivs: []
+                }).promise;
+            } catch (textError) {
+                console.warn('Text layer warning:', textError);
+            }
+
+            pdfContainer.appendChild(pageContainer);
+
+            return pageContainer;
+
+        } catch (error) {
+            console.error('Page render error:', error);
+            return null;
+        }
+    }
+</script>
+</body>
+</html>
