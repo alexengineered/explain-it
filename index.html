@@ -1152,70 +1152,91 @@
     // UPDATE THIS URL after deploying your Cloudflare Worker
     const WORKER_URL = 'https://explainit-proxy.xxx.workers.dev';
 
-    async function callAPI(userMessage, isInitialExplanation = false) {
-        const provider = apiSettings.provider;
-        const apiKey = apiSettings.apiKey;
-        const expertiseLevel = parseInt(expertiseSlider.value);
+ async function callAPI(userMessage, isInitialExplanation = false) {
+    const provider = apiSettings.provider;
+    const apiKey = apiSettings.apiKey;
+    const expertiseLevel = parseInt(expertiseSlider.value);
 
-        const expertiseLevels = [
-            ' to someone with no technical background and limited knowledge in the topic discussed. Use simple language, clear examples, and define any technical terms.',
-            ' to a first-year engineering student. Use simple language, basic technical terms, and link ideas to core principles.',
-            ' to an engineer with a few years of experience. Use standard terminology and focus on practical implications.',
-            ' to an experienced professional engineer. Use precise technical language, be concise, and highlight nuances.'
-        ];
+    // Determine expertise level text
+    const expertiseLevels = [
+        ' to someone with no technical background and limited knowledge in the topic discussed. Use simple language, clear examples, and define any technical terms.',
+        ' to a first-year engineering student. Use simple language, basic technical terms, and link ideas to core principles.',
+        ' to an engineer with a few years of experience. Use standard terminology and focus on practical implications.',
+        ' to an experienced professional engineer. Use precise technical language, be concise, and highlight nuances.'
+    ];
 
-        const level = expertiseLevel - 1;
-        const systemPrompt = `You are explaining technical text. Be concise and direct.`;
+    const level = expertiseLevel - 1;
 
-        let prompt = userMessage;
-        if (isInitialExplanation) {
-            const combinedText = selectedTexts.join('\n\n---\n\n');
-            prompt = `Briefly but clearly explain this text${expertiseLevels[level]}: "${combinedText}"`;
+    let systemPrompt = `You are explaining technical text. Be concise and direct.`;
+
+    let prompt = userMessage;
+    if (isInitialExplanation) {
+        prompt = `Briefly but clearly explain this text${expertiseLevels[level]}: "${selectedText}"`;
+    }
+
+    // Add to conversation history
+    conversationHistory.push({
+        role: 'user',
+        content: prompt
+    });
+
+    addLoadingMessage();
+
+    try {
+        // Call the Cloudflare Workers proxy
+        const response = await fetch('https://explainit-proxy.alexkabbourg.workers.dev/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                provider: provider,
+                apiKey: apiKey,
+                model: providerModels[provider],
+                messages: [
+                    {role: 'system', content: systemPrompt},
+                    ...conversationHistory
+                ]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Extract message based on provider format
+        let assistantMessage;
+        if (provider === 'claude') {
+            assistantMessage = data.content[0].text;
+        } else if (provider === 'gemini') {
+            assistantMessage = data.candidates[0].content.parts[0].text;
+        } else if (provider === 'qwen') {
+            assistantMessage = data.output.text;
+        } else {
+            // OpenAI and DeepSeek format
+            assistantMessage = data.choices[0].message.content;
         }
 
         conversationHistory.push({
-            role: 'user',
-            content: prompt
+            role: 'assistant',
+            content: assistantMessage
         });
 
-        addLoadingMessage();
+        removeLoadingMessage();
+        addMessage(assistantMessage, 'assistant');
 
-        try {
-            const response = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    provider: provider,
-                    apiKey: apiKey,
-                    systemPrompt: systemPrompt,
-                    messages: conversationHistory
-                })
-            });
+    } catch (error) {
+        removeLoadingMessage();
+        
+        const errorMessage = `❌ Error: ${error.message}\n\nPlease check:\n• Your API key is correct\n• You have API credits available\n• Your internet connection is working`;
+        addMessage(errorMessage, 'assistant');
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const assistantMessage = data.content;
-
-            conversationHistory.push({
-                role: 'assistant',
-                content: assistantMessage
-            });
-
-            removeLoadingMessage();
-            addMessage(assistantMessage, 'assistant');
-
-        } catch (error) {
-            removeLoadingMessage();
-            addMessage(`❌ Error: ${error.message}`, 'assistant');
-            console.error('API Error:', error);
-        }
+        console.error('API Error:', error);
     }
+}
 
     explainBtn.addEventListener('click', async () => {
         if (!apiSettings.provider || !apiSettings.apiKey) {
@@ -1578,4 +1599,5 @@
     }
 </script>
 </body>
+
 </html>
